@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e9e4d2">
+  <title>PIXEL / ASCII Camera</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #e9e4d2;
+      --ink: #252722;
+      --muted: #77796d;
+      --line: #b9b6a6;
+      --acid: #d9f36a;
+      --orange: #f05b35;
+      --screen: #151a16;
+      --screen-ink: #d9f36a;
+      --mono: "DM Mono", "Courier New", monospace;
+      --display: "VT323", "Courier New", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--paper);
+      background-image: radial-gradient(#25272212 0.75px, transparent 0.75px);
+      background-size: 5px 5px;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    button, select, input { font: inherit; }
+    button, select { color: inherit; }
+    .shell { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 500; letter-spacing: .04em; }
+    .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; background: var(--orange); color: var(--paper); font-size: 15px; }
+    .brand span:last-child { color: var(--muted); font-weight: 400; }
+    .top-meta { display: flex; align-items: center; gap: 22px; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+    .live-indicator { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); }
+    .live-indicator::before { content: ""; width: 7px; height: 7px; background: var(--orange); border-radius: 50%; }
+    main { padding: 31px 0 35px; }
+    .heading-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 18px; }
+    .eyebrow { margin: 0 0 3px; color: var(--muted); font-size: 10px; letter-spacing: .14em; }
+    h1 { margin: 0; font-family: var(--display); font-size: 43px; font-weight: 400; line-height: .95; letter-spacing: .02em; }
+    .session-id { color: var(--muted); font-size: 10px; text-align: right; line-height: 1.8; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 258px; border: 1px solid var(--ink); background: var(--paper); }
+    .view-column { min-width: 0; padding: 14px; border-right: 1px solid var(--ink); }
+    .view-topline, .view-bottomline { display: flex; justify-content: space-between; align-items: center; min-height: 25px; color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+    .view-topline { margin-bottom: 9px; }
+    .view-bottomline { margin-top: 9px; }
+    .view-label { display: flex; align-items: center; gap: 7px; color: var(--ink); }
+    .tiny-square { width: 7px; height: 7px; background: var(--orange); }
+    .screen-frame { position: relative; aspect-ratio: 4 / 3; min-height: 260px; overflow: hidden; background: var(--screen); border: 1px solid #080a08; }
+    #ascii { display: block; width: 100%; height: 100%; object-fit: contain; color: var(--screen-ink); }
+    .screen-overlay { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 3px, #00000015 3px 4px); }
+    .screen-corner { position: absolute; width: 14px; height: 14px; border-color: var(--acid); opacity: .8; }
+    .corner-tl { top: 10px; left: 10px; border-top: 1px solid; border-left: 1px solid; }
+    .corner-tr { top: 10px; right: 10px; border-top: 1px solid; border-right: 1px solid; }
+    .corner-bl { bottom: 10px; left: 10px; border-bottom: 1px solid; border-left: 1px solid; }
+    .corner-br { bottom: 10px; right: 10px; border-bottom: 1px solid; border-right: 1px solid; }
+    .frame-art { position: absolute; z-index: 2; inset: 0; pointer-events: none; color: var(--frame-ink, var(--acid)); }
+    .screen-frame[data-frame="none"] .screen-corner { display: none; }
+    .screen-frame[data-frame="crt"] .frame-art::before,
+    .screen-frame[data-frame="contact"] .frame-art::before { content: ""; position: absolute; inset: 8px; border: 1px solid currentColor; box-shadow: inset 0 0 0 4px #0005; }
+    .screen-frame[data-frame="crt"] .frame-art::after { content: "PIXEL LAB  /  ASCII"; position: absolute; top: 13px; left: 15px; padding: 2px 4px; background: #151a16cc; font: 8px var(--mono); }
+    .screen-frame[data-frame="film"] .frame-art::before,
+    .screen-frame[data-frame="film"] .frame-art::after { content: ""; position: absolute; left: 0; right: 0; height: 17px; background-color: var(--paper); background-image: radial-gradient(circle, var(--ink) 2px, transparent 2.5px); background-size: 18px 8px; background-position: center; background-repeat: repeat-x; }
+    .screen-frame[data-frame="film"] .frame-art::before { top: 0; }
+    .screen-frame[data-frame="film"] .frame-art::after { bottom: 0; }
+    .screen-frame[data-frame="contact"] .frame-art::after { content: "CONTACT PRINT  /  01"; position: absolute; bottom: 13px; left: 15px; padding: 2px 4px; background: #151a16cc; font: 8px var(--mono); }
+    .controls { padding: 15px 16px 14px; }
+    .control-heading { height: 25px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; letter-spacing: .12em; }
+    .control-group { padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .control-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 10px; }
+    .control-label span:last-child { color: var(--muted); }
+    .scheme-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .scheme {
+      display: flex; align-items: center; gap: 9px; width: 100%; min-height: 33px; padding: 0 9px;
+      border: 1px solid transparent; background: transparent; text-align: left; cursor: pointer;
+    }
+    .scheme:hover { background: #25272208; }
+    .scheme[aria-pressed="true"] { border-color: var(--ink); background: #25272208; }
+    .swatch { width: 13px; height: 13px; border: 1px solid #25272230; background: var(--swatch); }
+    .scheme-name { flex: 1; font-size: 11px; }
+    .scheme-code { color: var(--muted); font-size: 9px; }
+    .frame-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .frame-option { min-width: 0; padding: 6px; border: 1px solid var(--line); background: transparent; text-align: left; cursor: pointer; }
+    .frame-option[aria-pressed="true"] { border-color: var(--ink); background: #25272208; }
+    .frame-sample { display: block; height: 27px; margin-bottom: 5px; border: 1px solid var(--line); background: var(--screen); }
+    .frame-sample[data-style="crt"] { outline: 1px solid var(--frame-ink, var(--acid)); outline-offset: -4px; }
+    .frame-sample[data-style="film"] { border-block: 5px dotted var(--paper); }
+    .frame-sample[data-style="contact"] { outline: 1px solid var(--frame-ink, var(--acid)); outline-offset: -4px; box-shadow: inset 0 0 0 4px #0005; }
+    .frame-option-name { font-size: 9px; white-space: nowrap; }
+    input[type="range"] { width: 100%; height: 15px; margin: 0; accent-color: var(--orange); cursor: pointer; }
+    .range-ends { display: flex; justify-content: space-between; margin-top: 5px; color: var(--muted); font-size: 9px; }
+    .select-wrap { position: relative; }
+    select { width: 100%; height: 34px; padding: 0 26px 0 9px; appearance: none; border: 1px solid var(--line); border-radius: 0; background: transparent; font-size: 10px; cursor: pointer; }
+    .select-wrap::after { content: "▾"; position: absolute; right: 9px; top: 9px; pointer-events: none; }
+    .actions { display: grid; grid-template-columns: 1fr 40px; gap: 7px; padding-top: 16px; }
+    .button { height: 39px; border: 1px solid var(--ink); background: transparent; cursor: pointer; transition: background .15s, color .15s, transform .15s; }
+    .button:hover { background: var(--ink); color: var(--paper); }
+    .button:active { transform: translateY(1px); }
+    .button-primary { background: var(--orange); border-color: var(--orange); color: #fff8e9; font-weight: 500; }
+    .button-primary:hover { background: #d94b29; border-color: #d94b29; color: #fff8e9; }
+    .button:disabled { opacity: .48; cursor: not-allowed; }
+    .capture-icon { font-size: 17px; line-height: 1; }
+    .readout { display: flex; justify-content: space-between; padding: 12px 0 0; color: var(--muted); font-size: 9px; }
+    .readout strong { color: var(--ink); font-weight: 400; }
+    footer { display: flex; justify-content: space-between; padding: 14px 0 0; color: var(--muted); font-size: 9px; letter-spacing: .04em; }
+    #camera { display: none; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 28px, 580px); }
+      .topbar { height: 56px; }
+      .top-meta { gap: 11px; font-size: 9px; }
+      .top-meta > span:first-child { display: none; }
+      main { padding-top: 24px; }
+      .heading-row { align-items: center; }
+      h1 { font-size: 37px; }
+      .workspace { grid-template-columns: 1fr; }
+      .view-column { border-right: 0; border-bottom: 1px solid var(--ink); }
+      .screen-frame { min-height: 0; }
+      .controls { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+      .control-heading, .actions, .readout { grid-column: 1 / -1; }
+      .control-group:nth-of-type(2) { grid-row: auto; }
+      footer { gap: 12px; }
+    }
+    @media (max-width: 420px) {
+      .top-meta { gap: 8px; }
+      .brand { gap: 7px; font-size: 10px; }
+      .brand-mark { width: 24px; height: 24px; }
+      .session-id { font-size: 8px; }
+      .controls { column-gap: 12px; padding-inline: 12px; }
+      .control-group { padding: 13px 0; }
+      .scheme { min-height: 30px; padding-inline: 5px; gap: 6px; }
+      .scheme-name { font-size: 10px; }
+      footer { font-size: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">▦</span><span>PIXEL LAB</span><span>/ tools</span></div>
+      <div class="top-meta"><span>CAMERA MODULE 01</span><span class="live-indicator" id="status">STANDBY</span><span>v.1.04</span></div>
+    </header>
+    <main>
+      <div class="heading-row">
+        <div><p class="eyebrow">ANALOG INPUT / DIGITAL OUTPUT</p><h1>ASCII CAMERA</h1></div>
+        <div class="session-id">SESSION <span id="session-id">0000</span><br>FORMAT&nbsp; <span id="ratio-readout">4:3</span></div>
+      </div>
+      <section class="workspace" aria-label="ASCII camera workspace">
+        <div class="view-column">
+          <div class="view-topline"><span class="view-label"><i class="tiny-square"></i>LIVE VIEW</span><span id="view-state">NO SIGNAL</span></div>
+          <div class="screen-frame" id="screen-frame" data-frame="none">
+            <canvas id="ascii" aria-label="Live camera rendered as ASCII characters"></canvas>
+            <div class="screen-overlay" aria-hidden="true"></div>
+            <div class="frame-art" aria-hidden="true"></div>
+            <i class="screen-corner corner-tl"></i><i class="screen-corner corner-tr"></i>
+            <i class="screen-corner corner-bl"></i><i class="screen-corner corner-br"></i>
+          </div>
+          <div class="view-bottomline"><span id="resolution">INPUT&nbsp; -- × --</span><span id="fps">ASCII / 30 FPS</span></div>
+        </div>
+        <aside class="controls" aria-label="Camera controls">
+          <div class="control-heading"><span>IMAGE CONTROLS</span><span>▤ 01—04</span></div>
+          <div class="control-group">
+            <div class="control-label"><span>COLOR SCHEME</span><span>01</span></div>
+            <div class="scheme-list" role="group" aria-label="Color scheme">
+              <button class="scheme" data-scheme="matrix" aria-pressed="true"><i class="swatch" style="--swatch:#b6ed65"></i><span class="scheme-name">PHOSPHOR</span><span class="scheme-code">P1</span></button>
+              <button class="scheme" data-scheme="amber" aria-pressed="false"><i class="swatch" style="--swatch:#ffb34d"></i><span class="scheme-name">AMBER CRT</span><span class="scheme-code">A2</span></button>
+              <button class="scheme" data-scheme="ice" aria-pressed="false"><i class="swatch" style="--swatch:#8ce2df"></i><span class="scheme-name">ARCTIC</span><span class="scheme-code">C3</span></button>
+              <button class="scheme" data-scheme="mono" aria-pressed="false"><i class="swatch" style="--swatch:#e4e3d8"></i><span class="scheme-name">PAPER</span><span class="scheme-code">M4</span></button>
+              <button class="scheme" data-scheme="rose" aria-pressed="false"><i class="swatch" style="--swatch:#ff9bb5"></i><span class="scheme-name">ROSE</span><span class="scheme-code">R5</span></button>
+              <button class="scheme" data-scheme="cyber" aria-pressed="false"><i class="swatch" style="--swatch:#7de4ff"></i><span class="scheme-name">CYBER</span><span class="scheme-code">N6</span></button>
+              <button class="scheme" data-scheme="sunset" aria-pressed="false"><i class="swatch" style="--swatch:#ff9671"></i><span class="scheme-name">SUNSET</span><span class="scheme-code">S7</span></button>
+              <button class="scheme" data-scheme="ultraviolet" aria-pressed="false"><i class="swatch" style="--swatch:#dfafff"></i><span class="scheme-name">UV</span><span class="scheme-code">U8</span></button>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label"><span>PHOTO FRAME</span><span>02</span></div>
+            <div class="frame-options" role="group" aria-label="Photo frame">
+              <button class="frame-option" data-frame="none" aria-pressed="true"><span class="frame-sample" data-style="none"></span><span class="frame-option-name">BARE</span></button>
+              <button class="frame-option" data-frame="crt" aria-pressed="false"><span class="frame-sample" data-style="crt"></span><span class="frame-option-name">CRT PANEL</span></button>
+              <button class="frame-option" data-frame="film" aria-pressed="false"><span class="frame-sample" data-style="film"></span><span class="frame-option-name">FILM STRIP</span></button>
+              <button class="frame-option" data-frame="contact" aria-pressed="false"><span class="frame-sample" data-style="contact"></span><span class="frame-option-name">CONTACT</span></button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="ratio-select"><span>ASPECT RATIO</span><span>03</span></label>
+            <div class="select-wrap"><select id="ratio-select" aria-label="Aspect ratio">
+              <option value="4 / 3" data-label="4:3">CLASSIC 4:3</option>
+              <option value="1 / 1" data-label="1:1">SQUARE 1:1</option>
+              <option value="3 / 2" data-label="3:2">FILM 3:2</option>
+              <option value="16 / 9" data-label="16:9">WIDE 16:9</option>
+              <option value="9 / 16" data-label="9:16">PORTRAIT 9:16</option>
+            </select></div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="detail"><span>CHARACTER DETAIL</span><span id="detail-value">MEDIUM</span></label>
+            <input id="detail" type="range" min="1" max="3" value="2" step="1" aria-label="Character detail">
+            <div class="range-ends"><span>COARSE</span><span>FINE</span></div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="camera-select"><span>INPUT DEVICE</span><span>03</span></label>
+            <div class="select-wrap"><select id="camera-select" aria-label="Camera input"><option value="">DEFAULT CAMERA</option></select></div>
+          </div>
+          <div class="actions">
+            <button class="button button-primary" id="start-button">▶ &nbsp; START CAMERA</button>
+            <button class="button" id="capture-button" aria-label="Save ASCII image" title="Save image" disabled><span class="capture-icon">▣</span></button>
+          </div>
+          <div class="readout"><span>RENDER MODE</span><strong id="mode-readout">ASCII / LIVE</strong></div>
+        </aside>
+      </section>
+      <footer><span>PIXEL LAB © 1994—2026</span><span>NO PIXELS WERE HARMED IN THIS PROCESS</span><span>MADE FOR THE PRESENT</span></footer>
+    </main>
+  </div>
+  <video id="camera" autoplay playsinline muted></video>
+  <script>
+    const canvas = document.querySelector("#ascii");
+    const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+    const screenFrame = document.querySelector("#screen-frame");
+    const video = document.querySelector("#camera");
+    const status = document.querySelector("#status");
+    const startButton = document.querySelector("#start-button");
+    const captureButton = document.querySelector("#capture-button");
+    const cameraSelect = document.querySelector("#camera-select");
+    const ratioSelect = document.querySelector("#ratio-select");
+    const detailSlider = document.querySelector("#detail");
+    const ramp = "@%#*+=-:. ";
+    const palettes = {
+      matrix: { ink: "#d9f36a", glow: "#9ecb4e", screen: "#151a16" },
+      amber: { ink: "#ffc36b", glow: "#d98736", screen: "#21170f" },
+      ice: { ink: "#9ef1e9", glow: "#54aaa9", screen: "#102022" },
+      mono: { ink: "#efeee2", glow: "#a8aa9d", screen: "#1c1d1a" },
+      rose: { ink: "#ff9bb5", glow: "#db6c91", screen: "#27151d" },
+      cyber: { ink: "#7de4ff", glow: "#3b9ddd", screen: "#101e2d" },
+      sunset: { ink: "#ff9671", glow: "#e6694a", screen: "#261614" },
+      ultraviolet: { ink: "#dfafff", glow: "#ad76dd", screen: "#21162e" }
+    };
+    let activePalette = "matrix";
+    let activeFrame = "none";
+    let stream = null;
+    let animationFrame = 0;
+    let lastFrame = 0;
+    let frozen = false;
+
+    document.querySelector("#session-id").textContent = Math.random().toString(16).slice(2, 6).toUpperCase();
+
+    function setStatus(label, active = false) {
+      status.textContent = label;
+      status.style.color = active ? "#d94b29" : "";
+      document.querySelector("#view-state").textContent = active ? "SIGNAL LOCKED" : "NO SIGNAL";
+    }
+
+    function updateCanvasSize() {
+      const bounds = canvas.getBoundingClientRect();
+      const density = Number(detailSlider.value);
+      const columns = density === 1 ? 62 : density === 2 ? 92 : 126;
+      canvas.width = columns * 8;
+      canvas.height = Math.round(canvas.width * (bounds.height / bounds.width));
+    }
+
+    function drawPlaceholder() {
+      const bounds = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(bounds.width * 1.5));
+      canvas.height = Math.max(1, Math.round(bounds.height * 1.5));
+      context.fillStyle = palettes[activePalette].screen;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = palettes[activePalette].glow;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.font = `${Math.max(12, Math.round(canvas.width / 54))}px monospace`;
+      context.fillText("[ CAMERA STANDING BY ]", canvas.width / 2, canvas.height / 2);
+      context.textAlign = "start";
+    }
+
+    function renderFrame(timestamp) {
+      animationFrame = requestAnimationFrame(renderFrame);
+      if (frozen || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || timestamp - lastFrame < 33) return;
+      lastFrame = timestamp;
+      updateCanvasSize();
+      const width = canvas.width;
+      const height = canvas.height;
+      context.drawImage(video, 0, 0, width, height);
+      const frame = context.getImageData(0, 0, width, height);
+      context.fillStyle = palettes[activePalette].screen;
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = palettes[activePalette].ink;
+      context.textBaseline = "top";
+      context.font = `${Math.ceil(width / (detailSlider.value === "3" ? 126 : detailSlider.value === "2" ? 92 : 62))}px monospace`;
+      const cellWidth = width / Math.round(width / (detailSlider.value === "3" ? 8 : detailSlider.value === "2" ? 11 : 16));
+      const cellHeight = Math.max(7, cellWidth * 1.45);
+      const columns = Math.floor(width / cellWidth);
+      const rows = Math.floor(height / cellHeight);
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          const x = Math.min(width - 1, Math.floor((column + .5) * cellWidth));
+          const y = Math.min(height - 1, Math.floor((row + .5) * cellHeight));
+          const offset = (y * width + x) * 4;
+          const luminance = (frame.data[offset] * .299 + frame.data[offset + 1] * .587 + frame.data[offset + 2] * .114) / 255;
+          const character = ramp[Math.floor((1 - luminance) * (ramp.length - 1))];
+          context.fillText(character, column * cellWidth, row * cellHeight);
+        }
+      }
+    }
+
+    function drawPhotoFrame(target, width, height) {
+      if (activeFrame === "none") return;
+      const palette = palettes[activePalette];
+      const inset = Math.max(7, Math.round(width * .018));
+      const fontSize = Math.max(8, Math.round(width * .017));
+      target.save();
+      target.strokeStyle = palette.ink;
+      target.fillStyle = palette.ink;
+      target.lineWidth = Math.max(1, width / 700);
+      target.font = `${fontSize}px monospace`;
+      if (activeFrame === "crt") {
+        target.strokeRect(inset, inset, width - inset * 2, height - inset * 2);
+        target.strokeRect(inset + 4, inset + 4, width - (inset + 4) * 2, height - (inset + 4) * 2);
+        target.fillStyle = palette.screen;
+        target.fillRect(inset + 8, inset + 5, fontSize * 13, fontSize + 5);
+        target.fillStyle = palette.ink;
+        target.fillText("PIXEL LAB / ASCII", inset + 11, inset + fontSize + 3);
+      } else if (activeFrame === "film") {
+        const band = Math.max(18, Math.round(height * .055));
+        target.fillStyle = "#e9e4d2";
+        target.fillRect(0, 0, width, band);
+        target.fillRect(0, height - band, width, band);
+        target.fillStyle = palette.screen;
+        for (let x = 7; x < width - 5; x += Math.max(16, Math.round(width * .025))) {
+          target.fillRect(x, Math.round(band / 2) - 3, 6, 6);
+          target.fillRect(x, height - Math.round(band / 2) - 3, 6, 6);
+        }
+      } else if (activeFrame === "contact") {
+        target.strokeRect(inset, inset, width - inset * 2, height - inset * 2);
+        target.strokeRect(inset + 5, inset + 5, width - (inset + 5) * 2, height - (inset + 5) * 2);
+        target.fillStyle = palette.screen;
+        target.fillRect(inset + 8, height - inset - fontSize - 7, fontSize * 14, fontSize + 5);
+        target.fillStyle = palette.ink;
+        target.fillText("CONTACT PRINT / 01", inset + 11, height - inset - 5);
+      }
+      target.restore();
+    }
+
+    async function startCamera(deviceId = "") {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("UNAVAILABLE");
+        startButton.textContent = "CAMERA NOT SUPPORTED";
+        return;
+      }
+      startButton.disabled = true;
+      startButton.textContent = "CONNECTING...";
+      captureButton.disabled = true;
+      try {
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { deviceId: deviceId ? { exact: deviceId } : undefined, width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        video.srcObject = stream;
+        await video.play();
+        frozen = false;
+        captureButton.disabled = false;
+        startButton.textContent = "Ⅱ  PAUSE FEED";
+        startButton.disabled = false;
+        document.querySelector("#resolution").textContent = `INPUT  ${video.videoWidth} × ${video.videoHeight}`;
+        setStatus("LIVE", true);
+        cancelAnimationFrame(animationFrame);
+        animationFrame = requestAnimationFrame(renderFrame);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(device => device.kind === "videoinput");
+        cameraSelect.replaceChildren(...cameras.map((device, index) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.textContent = device.label || `CAMERA ${String(index + 1).padStart(2, "0")}`;
+          option.selected = device.deviceId === stream.getVideoTracks()[0].getSettings().deviceId;
+          return option;
+        }));
+      } catch (error) {
+        console.error("Unable to start camera", error);
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        stream = null;
+        captureButton.disabled = true;
+        setStatus(error.name === "NotAllowedError" ? "PERMISSION DENIED" : "NO CAMERA FOUND");
+        startButton.textContent = "▶  START CAMERA";
+        drawPlaceholder();
+      } finally {
+        startButton.disabled = false;
+      }
+    }
+
+    startButton.addEventListener("click", () => {
+      if (!stream) return startCamera(cameraSelect.value);
+      frozen = !frozen;
+      startButton.textContent = frozen ? "▶  RESUME FEED" : "Ⅱ  PAUSE FEED";
+      document.querySelector("#mode-readout").textContent = frozen ? "ASCII / PAUSED" : "ASCII / LIVE";
+    });
+    cameraSelect.addEventListener("change", () => startCamera(cameraSelect.value));
+    detailSlider.addEventListener("input", () => {
+      document.querySelector("#detail-value").textContent = ["COARSE", "MEDIUM", "FINE"][Number(detailSlider.value) - 1];
+      if (!stream) drawPlaceholder();
+    });
+    document.querySelectorAll(".scheme").forEach(button => button.addEventListener("click", () => {
+      activePalette = button.dataset.scheme;
+      document.querySelectorAll(".scheme").forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+      screenFrame.style.backgroundColor = palettes[activePalette].screen;
+      screenFrame.style.setProperty("--frame-ink", palettes[activePalette].ink);
+      if (!stream) drawPlaceholder();
+    }));
+    document.querySelectorAll(".frame-option").forEach(button => button.addEventListener("click", () => {
+      activeFrame = button.dataset.frame;
+      screenFrame.dataset.frame = activeFrame;
+      document.querySelectorAll(".frame-option").forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+    }));
+    ratioSelect.addEventListener("change", () => {
+      screenFrame.style.aspectRatio = ratioSelect.value;
+      document.querySelector("#ratio-readout").textContent = ratioSelect.selectedOptions[0].dataset.label;
+      if (!stream) drawPlaceholder();
+    });
+    captureButton.addEventListener("click", () => {
+      if (!stream) return;
+      const output = document.createElement("canvas");
+      output.width = canvas.width;
+      output.height = canvas.height;
+      const outputContext = output.getContext("2d");
+      outputContext.drawImage(canvas, 0, 0);
+      drawPhotoFrame(outputContext, output.width, output.height);
+      const link = document.createElement("a");
+      link.download = `pixel-lab-${activePalette}-${ratioSelect.selectedOptions[0].dataset.label.replace(":", "-")}-${Date.now()}.png`;
+      link.href = output.toDataURL("image/png");
+      link.click();
+    });
+    window.addEventListener("resize", () => { if (!stream) drawPlaceholder(); });
+    drawPlaceholder();
+  </script>
+</body>
+</html>
